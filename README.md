@@ -60,7 +60,8 @@ exon_lof_popmax = data/exon_lof_popmax_hg38.bed
 pathogenic_site = data/clinvar_pathogenic_GRCh38.vcf
 ```
 
-All refs obtained from original git repo from `data` dir except for hg38 fasta.
+All refs were obtained from original git repo from `data` dir except for hg38 fasta.
+They now live [here](https://cavatica.sbgenomics.com/u/kfdrc-harmonization/kf-references/files/648b2bf575423d2473af6ed7/)
 User should provide that as part of input
 
 **Note:** the chromosome name in fasta files should have `chr` prefix

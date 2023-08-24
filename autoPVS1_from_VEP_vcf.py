@@ -89,8 +89,12 @@ def main():
                 info[csq_fields[i]] = first_picked[i].replace('%3D', '=')
 
         vcfrecord = VCFRecord(record.contig.replace('chr', ''), str(record.pos), record.ref, record.alts[0])
-        transcript = get_transcript(info['Feature'], transcripts_hg38)
-
+        # Favor refseq ID
+        if info['RefSeq'] != '':
+            tx = info['RefSeq']
+        else:
+            tx = info['Feature']
+        transcript = get_transcript(tx, transcripts_hg38)
         consequence = vep_consequence_trans(info['Consequence'])
         vcf_id = "-".join([vcfrecord.chrom, str(vcfrecord.pos), vcfrecord.ref, vcfrecord.alt])
         if consequence in lof_type and transcript:

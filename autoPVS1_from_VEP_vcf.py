@@ -26,7 +26,7 @@ def pick_transcript(record, csq_fields, summary, csq_severity_order):
     1. See if the tx candidate is canonical
     2. If canonical, check to see if it exists in the tool transcript reference
     3. If multiple hits exists, use rank list to chose the worst
-    4. If still multiple (meaning ranks are tied) just pick the first one seen
+    4. If still multiple (meaning ranks are tied), use longest transcript length as defined by the reference
     5. If no hits from step 1 and 2, just revert to using PICK
     """
     # Rules - is canonical, is in transcript reference
@@ -51,20 +51,41 @@ def pick_transcript(record, csq_fields, summary, csq_severity_order):
                 if check is not None:
                     picked_csqs.append(info_list)
                     tx_candidates.append(check)
-    # tie break with rank - if multiple share rank, go first best found
+    # tie break with rank - if multiple share rank, go with PICK, if not go with tx length
     if len(picked_csqs) > 1:
         best_rank = 1000
         champ = 0
         summary['rank'] += 1
+        score_dict = {}
         for c in range(len(picked_csqs)):
             # Some variants have "compound csqs" seprated by '&', subdivide and go with worst first
             csq_values = picked_csqs[c][csq_idx].split("&")
             for csq_value in csq_values:
                 score = csq_severity_order.index(csq_value)
-                if score < best_rank:
+                if score <= best_rank:
                     # even if found, keep going in case a later rank is even worse
                     best_rank = score
                     champ = c
+                    if score not in score_dict:
+                        score_dict[score] = []
+                    score_dict[score].append(c)
+        if len(score_dict[best_rank]) > 1:
+            print("Multiple candidates found for {} {}, looking for PICK".format(record.contig, record.pos), file=sys.stderr)
+            # also track tx lengths
+            longest = 0
+            tx_len_dict = {}
+            for tied in score_dict[best_rank]:
+                tx_len = tx_candidates[tied].tx_length
+                if tx_len > longest:
+                    longest = tx_len
+                    tx_len_dict[longest] = tied
+                if picked_csqs[tied] == pick[1]:
+                    summary['pick'] +=1
+                    return pick[0], pick[1], summary
+            # If not found, warn that first rank hit used
+            print("WARN: No matching PICK, default to longest transcript", file=sys.stderr)
+            summary['length'] +=1
+            return tx_candidates[tx_len_dict[longest]], picked_csqs[tx_len_dict[longest]], summary
         return tx_candidates[champ], picked_csqs[champ], summary
     # go with PICK
     if len(picked_csqs) == 0:
@@ -90,9 +111,8 @@ def main():
 
     # Use VEP PICK field to choose a representative transcript
     csq_fields = in_vcf.header.info['CSQ'].description.replace("Consequence annotations from Ensembl VEP. Format: ", "").split("|")
-
     print ("vcf_id",'SYMBOL','Feature','trans_name','consequence', 'strength_raw', 'strength','criterion', sep="\t")
-    summary = { "canonical": 0, "pick": 0, "rank": 0 }
+    summary = { "canonical": 0, "pick": 0, "rank": 0, "length": 0 }
     for record in in_vcf.fetch():
         # Parse CSQ for PICKed transcript
         # Populate dict with CSQ key-value pairs
@@ -141,7 +161,7 @@ def main():
                   'Unmet',
                   'na',
                   sep="\t")
-    print("Summary of transcript pick categories: Canonical: {}, Rank: {}, Pick: {}".format(summary['canonical'], summary['rank'], summary['pick']), file=sys.stderr)
+    print("Summary of transcript pick categories: Canonical: {}, Rank: {}, Pick: {}, Length: {}".format(summary['canonical'], summary['rank'], summary['pick'], summary['length']), file=sys.stderr)
 
 if __name__ == '__main__':
     main()

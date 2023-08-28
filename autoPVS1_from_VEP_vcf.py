@@ -1,4 +1,9 @@
 #!/usr/bin/env python
+"""
+Modified autoPVS1 wrapper script, as original did not work but overall scoring logic preserved.
+Overall goal is to classify "Null Variants".
+A good defition of what a PVS1 Null variant is: https://www.baylorgenetics.com/variant-classification/
+"""
 # -*- coding:utf-8 -*-
 # author: Jiguang Peng
 # created: 2019/6/27 19:13
@@ -7,7 +12,6 @@
 
 import sys
 import argparse
-from collections import namedtuple
 import pysam
 from read_data_mod import transcripts_hg38
 from pvs1 import PVS1
@@ -16,6 +20,15 @@ __version__ = 'v0.3.0'
 
 
 def pick_transcript(record, csq_fields, summary, csq_severity_order):
+    """
+    Function to process a record and choose a representative transcript
+    Does so by doing the following:
+    1. See if the tx candidate is canonical
+    2. If canonical, check to see if it exists in the tool transcript reference
+    3. If multiple hits exists, use rank list to chose the worst
+    4. If still multiple (meaning ranks are tied) just pick the first one seen
+    5. If no hits from step 1 and 2, just revert to using PICK
+    """
     # Rules - is canonical, is in transcript reference
     canon_idx = csq_fields.index("CANONICAL")
     p_idx = csq_fields.index("PICK")

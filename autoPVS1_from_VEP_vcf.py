@@ -2,7 +2,7 @@
 """
 Modified autoPVS1 wrapper script, as original did not work but overall scoring logic preserved.
 Overall goal is to classify "Null Variants".
-A good defition of what a PVS1 Null variant is: https://www.baylorgenetics.com/variant-classification/
+A good definition of what a PVS1 Null variant is: https://www.baylorgenetics.com/variant-classification/
 """
 # -*- coding:utf-8 -*-
 # author: Jiguang Peng
@@ -16,7 +16,7 @@ import pysam
 from read_data_mod import transcripts_hg38
 from pvs1 import PVS1
 from utils import get_transcript, vep_consequence_trans, VCFRecord
-__version__ = 'v0.3.0'
+__version__ = 'v2.0.0'
 
 
 def pick_transcript(record, csq_fields, summary, csq_severity_order):
@@ -29,7 +29,6 @@ def pick_transcript(record, csq_fields, summary, csq_severity_order):
     4. If still multiple (meaning ranks are tied), use longest transcript length as defined by the reference
     5. If no hits from step 1 and 2, just revert to using PICK
     """
-    # Rules - is canonical, is in transcript reference
     canon_idx = csq_fields.index("CANONICAL")
     p_idx = csq_fields.index("PICK")
     csq_idx = csq_fields.index("Consequence")
@@ -58,12 +57,12 @@ def pick_transcript(record, csq_fields, summary, csq_severity_order):
         summary['rank'] += 1
         score_dict = {}
         for c in range(len(picked_csqs)):
-            # Some variants have "compound csqs" seprated by '&', subdivide and go with worst first
+            # Some variants have "compound csqs" separated by '&', subdivide and go with worst first
             csq_values = picked_csqs[c][csq_idx].split("&")
             for csq_value in csq_values:
                 score = csq_severity_order.index(csq_value)
                 if score <= best_rank:
-                    # even if found, keep going in case a later rank is even worse
+                    # even if found, keep going in case a later rank is even better
                     best_rank = score
                     champ = c
                     if score not in score_dict:
@@ -104,24 +103,22 @@ def main():
                         version='%(prog)s {version}'.format(version=__version__))
     args = parser.parse_args()
     lof_type = ['frameshift', 'nonsense', 'splice-5', 'splice-3', 'init-loss']
+    # from https://useast.ensembl.org/info/genome/variation/prediction/predicted_data.html#consequences
     csq_severity_order = ["transcript_ablation","splice_acceptor_variant","splice_donor_variant","stop_gained","frameshift_variant","stop_lost","start_lost","transcript_amplification","feature_elongation","feature_truncation","inframe_insertion","inframe_deletion","missense_variant","protein_altering_variant","splice_donor_5th_base_variant","splice_region_variant","splice_donor_region_variant","splice_polypyrimidine_tract_variant","incomplete_terminal_codon_variant","start_retained_variant","stop_retained_variant","synonymous_variant","coding_sequence_variant","mature_miRNA_variant","5_prime_UTR_variant","3_prime_UTR_variant","non_coding_transcript_exon_variant","intron_variant","NMD_transcript_variant","non_coding_transcript_variant","coding_transcript_variant","upstream_gene_variant","downstream_gene_variant","TFBS_ablation","TFBS_amplification","TF_binding_site_variant","regulatory_region_ablation","regulatory_region_amplification","regulatory_region_variant","intergenic_variant","sequence_variant"]
 
     genome_version = args.genome_version
     in_vcf = pysam.VariantFile(args.vep_vcf, threads=8)
 
-    # Use VEP PICK field to choose a representative transcript
     csq_fields = in_vcf.header.info['CSQ'].description.replace("Consequence annotations from Ensembl VEP. Format: ", "").split("|")
     print ("vcf_id",'SYMBOL','Feature','trans_name','consequence', 'strength_raw', 'strength','criterion', sep="\t")
     summary = { "canonical": 0, "pick": 0, "rank": 0, "length": 0 }
     for record in in_vcf.fetch():
-        # Parse CSQ for PICKed transcript
-        # Populate dict with CSQ key-value pairs
-        
+        # Get representative transcript to score
         transcript, first_picked, summary = pick_transcript(record, csq_fields, summary, csq_severity_order)
         info = {}
         for i in range(len(first_picked)):
             info[csq_fields[i]] = first_picked[i]
-            # adjust this filed to match behavior of original auto pvs1 script
+            # adjust this field to match behavior of original auto pvs1 script
             if csq_fields[i] == 'HGVSp':
                 info[csq_fields[i]] = first_picked[i].replace('%3D', '=')
 

@@ -57,7 +57,7 @@ def pick_transcript(record, csq_fields, summary, csq_severity_order):
         summary['rank'] += 1
         score_dict = {}
         for c in range(len(picked_csqs)):
-            # Some variants have "compound csqs" separated by '&', subdivide and go with worst first
+            # Some variants have "compound csqs" separated by '&', subdivide and go with best first
             csq_values = picked_csqs[c][csq_idx].split("&")
             for csq_value in csq_values:
                 score = csq_severity_order.index(csq_value)

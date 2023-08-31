@@ -19,26 +19,22 @@ from utils import get_transcript, vep_consequence_trans, VCFRecord
 __version__ = 'v2.0.0'
 
 
-def pick_transcript(record, csq_fields, summary, csq_severity_order):
+def get_candidates(record_csq, csq_fields):
     """
-    Function to process a record and choose a representative transcript
-    Does so by doing the following:
     1. See if the tx candidate is canonical
     2. If canonical, check to see if it exists in the tool transcript reference
-    3. If multiple hits exists, use rank list to chose the worst
-    4. If still multiple (meaning ranks are tied), use longest transcript length as defined by the reference
-    5. If no hits from step 1 and 2, just revert to using PICK
+    3. Record the PICK value for rule 5 from pick_transcript
     """
     canon_idx = csq_fields.index("CANONICAL")
     p_idx = csq_fields.index("PICK")
-    csq_idx = csq_fields.index("Consequence")
+    
     pick_value = "1"
     canon_value = "YES"
     r_idx = csq_fields.index('RefSeq')
     picked_csqs = []
     tx_candidates = []
 
-    for csq in record.info['CSQ']:
+    for csq in record_csq:
         info_list = csq.split("|")
         refseq_id = info_list[r_idx]
         if info_list[p_idx] == pick_value:
@@ -50,6 +46,22 @@ def pick_transcript(record, csq_fields, summary, csq_severity_order):
                 if check is not None:
                     picked_csqs.append(info_list)
                     tx_candidates.append(check)
+    return picked_csqs, tx_candidates, pick
+
+
+def pick_transcript(record, csq_fields, summary, csq_severity_order):
+    """
+    Function to process a record and choose a representative transcript
+    Does so by doing the following:
+    1. See if the tx candidate is canonical
+    2. If canonical, check to see if it exists in the tool transcript reference
+    3. If multiple hits exists, use rank list to chose the worst
+    4. If still multiple (meaning ranks are tied), use longest transcript length as defined by the reference
+    5. If no hits from step 1 and 2, just revert to using PICK
+    """
+    picked_csqs, tx_candidates, pick = get_candidates(record.info['CSQ'], csq_fields)
+    csq_idx = csq_fields.index("Consequence")
+
     # tie break with rank - if multiple share rank, go with PICK, if not go with tx length
     if len(picked_csqs) > 1:
         best_rank = 1000

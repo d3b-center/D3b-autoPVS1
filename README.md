@@ -69,7 +69,7 @@ User should provide that as part of input
 ## USAGE
 
 ```sh
-python3 pathogenicity-assessment/autopvs1/autoPVS1_from_VEP_vcf.py hg38 ~/volume/VEP_TEST/AUTOPVS1_TEST/input_VEP_annotated.vcf.gz > output.autopvs1.tsv
+python3 pathogenicity-assessment/autopvs1/autoPVS1_from_VEP_vcf.py --genome_version hg38 --vep_vcf ~/volume/VEP_TEST/AUTOPVS1_TEST/input_VEP_annotated.vcf.gz > output.autopvs1.tsv
 ```
 
 ## FAQ

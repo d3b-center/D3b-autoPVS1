@@ -117,14 +117,13 @@ def pick_transcript(record, csq_fields, summary):
     if len(candidate_csqs) == 1:
         summary['canonical'] += 1
         return_values =  tx_candidates[0], candidate_csqs[0], summary
-
-    # tie break with rank - if multiple share rank, go with PICK, if not go with tx length
-    if len(candidate_csqs) > 1:
-        return_values = tie_breaker(record, candidate_csqs, tx_candidates, pick, csq_fields, summary)
-    # go with PICK
-    if len(candidate_csqs) == 0:
+   # go with PICK
+    elif len(candidate_csqs) == 0:
         summary['pick'] +=1
         return_values =  pick[0], pick[1], summary
+    # tie break with rank - if multiple share rank, go with PICK, if not go with tx length
+    else:
+        return_values = tie_breaker(record, candidate_csqs, tx_candidates, pick, csq_fields, summary)
     return return_values
 
 
